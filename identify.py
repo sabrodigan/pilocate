@@ -13,7 +13,7 @@ PI_OUIS = {
 }
 
 # Hostnames this house already uses, plus the stock Raspberry Pi name.
-PI_NAME = re.compile(r"(raspberry|raspi|\bras[\s-]?\d|\bras-)", re.IGNORECASE)
+PI_NAME = re.compile(r"(raspberry|raspi|\bras[\s-]?\d|\bras-|\bpi-\d)", re.IGNORECASE)
 
 
 def normal_mac(value):

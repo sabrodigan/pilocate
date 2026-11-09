@@ -4,6 +4,8 @@
 import json
 import os
 import subprocess
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
@@ -12,6 +14,8 @@ from pymongo import MongoClient, ReturnDocument
 
 from access import AuthFailed, flash, install_key, key_status, update_ssh_config
 from locate import NetScout, find_pis, network_report, valid_ip, valid_user
+from specs import read_hardware
+from updates import watch_updates
 
 NETSCOUT_URL = os.environ.get("NETSCOUT_URL", "http://127.0.0.1:8092")
 SCAN_CIDR = os.environ.get("SCAN_CIDR", "192.168.1.0/24")
@@ -63,6 +67,10 @@ class Store:
                 "ssh_user": (previous or {}).get("ssh_user") or DEFAULT_USER,
                 "place": (previous or {}).get("place") or "",
                 "key_installed": bool((previous or {}).get("key_installed")),
+                "hardware": (previous or {}).get("hardware") or {},
+                "hardware_error": (previous or {}).get("hardware_error") or "",
+                "updates": (previous or {}).get("updates") or {},
+                "updates_error": (previous or {}).get("updates_error") or "",
                 "last_seen": seen,
                 "scan_id": scan_id,
                 "scan_finished": finished,
@@ -106,6 +114,21 @@ class Store:
 
     def mark_key(self, ip, installed):
         self.pis.update_one({"ip": ip}, {"$set": {"key_installed": bool(installed)}})
+
+    def save_hardware(self, ip, hardware):
+        self.pis.update_one({"ip": ip}, {"$set": {"hardware": hardware, "hardware_error": ""}})
+
+    def note_hardware_error(self, ip, message):
+        self.pis.update_one({"ip": ip}, {"$set": {"hardware_error": str(message)[:300]}})
+
+    def save_updates(self, ip, report):
+        self.pis.update_one({"ip": ip}, {"$set": {"updates": report, "updates_error": ""}})
+
+    def note_updates_error(self, ip, message):
+        self.pis.update_one({"ip": ip}, {"$set": {
+            "updates_error": str(message)[:300],
+            "updates.checked_at": datetime.now().astimezone().isoformat(),
+        }})
 
     def _by_mac_or_ip(self, mac, ip):
         if mac:
@@ -174,6 +197,8 @@ def make_handler(store, scout):
                 scan = scout.scan(SCAN_CIDR) if run_scan else scout.latest()
                 found = find_pis(scan)
                 pis = store.remember(found, scan)
+                self._read_hardware(pis)
+                pis = store.list_pis()
             except RuntimeError as error:
                 self._json(502, {"error": str(error)})
                 return
@@ -187,6 +212,30 @@ def make_handler(store, scout):
                 "key": key_status(),
                 "network": network_report(scout),
             })
+
+        def _read_hardware(self, records):
+            targets = [
+                record for record in records
+                if record.get("present") and record.get("ssh_open") and valid_ip(record.get("ip"))
+            ]
+
+            def one(record):
+                ip = record["ip"]
+                user = record.get("ssh_user") or DEFAULT_USER
+                try:
+                    specs = read_hardware(ip, user)
+                except (RuntimeError, subprocess.TimeoutExpired, OSError) as error:
+                    return ip, None, str(error)
+                specs["read_at"] = utcnow().isoformat()
+                return ip, specs, ""
+
+            with ThreadPoolExecutor(max_workers=6) as pool:
+                results = list(pool.map(one, targets))
+            for ip, specs, error in results:
+                if specs:
+                    store.save_hardware(ip, specs)
+                elif error:
+                    store.note_hardware_error(ip, error)
 
         def _find(self):
             body = self._body()
@@ -292,6 +341,7 @@ def make_handler(store, scout):
             data = open(full, "rb").read()
             self.send_response(200)
             self.send_header("Content-Type", kind)
+            self.send_header("Cache-Control", "no-cache")
             self.send_header("Content-Length", str(len(data)))
             self.end_headers()
             self.wfile.write(data)
@@ -308,6 +358,7 @@ def main():
     scout = NetScout(NETSCOUT_URL)
     host, _, port = os.environ.get("LISTEN_ADDR", "0.0.0.0:8094").rpartition(":")
     server = ThreadingHTTPServer((host or "0.0.0.0", int(port)), make_handler(store, scout))
+    threading.Thread(target=watch_updates, args=(store, threading.Event()), name="update-check", daemon=True).start()
     print(f"pilocate listening on http://{host or '0.0.0.0'}:{port}", flush=True)
     print(f"NetScout scans from {NETSCOUT_URL}", flush=True)
     try:

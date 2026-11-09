@@ -123,8 +123,12 @@ function card(pi) {
   const badges = el("div", "badges");
   badges.append(el("span", pi.present ? "badge" : "badge away", pi.present ? (pi.ssh_open ? "Reachable" : "Seen") : "Not in the last scan"));
   if (pi.key_installed) badges.append(el("span", "badge", "Key ready"));
+  const pending = upgradeCount(pi);
+  if (pending !== null) badges.append(el("span", pending ? "badge due" : "badge", pending === 1 ? "1 to upgrade" : `${pending} to upgrade`));
   top.append(badges);
   node.append(top);
+  const specs = hardwareList(pi);
+  if (specs) node.append(specs);
   if (pi.open_ports?.length) node.append(el("p", "muted", `Open ports ${pi.open_ports.join(", ")}`));
   const fields = el("div", "fields");
   fields.append(field("Where it lives", pi.place || "", (value) => save(pi, { place: value }), "Cupboard, loft, desk…"));
@@ -136,6 +140,47 @@ function card(pi) {
   actions.append(button);
   node.append(actions);
   return node;
+}
+
+function upgradeCount(pi) {
+  const count = pi.updates && pi.updates.count;
+  return Number.isInteger(count) ? count : null;
+}
+
+function upgradeText(pi) {
+  const updates = pi.updates || {};
+  if (!Number.isInteger(updates.count)) return pi.updates_error || "";
+  const upgraded = Number.isInteger(updates.upgraded) ? updates.upgraded : updates.count;
+  const fresh = updates.lists_refreshed === false ? ", package lists not refreshed" : "";
+  const extra = updates.new ? `, ${updates.new} new` : "";
+  const noun = upgraded === 1 ? "package" : "packages";
+  let text = `${upgraded} ${noun} to upgrade${extra}${fresh}`;
+  if (updates.checked_at) {
+    const when = new Date(updates.checked_at);
+    if (!Number.isNaN(when.getTime())) text += `, checked ${when.toLocaleString()}`;
+  }
+  return text;
+}
+
+function hardwareList(pi) {
+  const hardware = pi.hardware || {};
+  const rows = [
+    ["Upgrades", upgradeText(pi)],
+    ["Board", hardware.board],
+    ["CPU", hardware.cpu],
+    ["RAM", hardware.ram],
+    ["Cycle rate", hardware.clock],
+    ["uname -a", hardware.uname],
+  ].filter((row) => row[1]);
+  if (!rows.length) {
+    return pi.hardware_error ? el("p", "muted", pi.hardware_error) : null;
+  }
+  const list = el("dl", "specs");
+  for (const [label, value] of rows) {
+    list.append(el("dt", "", label));
+    list.append(el("dd", "", value));
+  }
+  return list;
 }
 
 function field(labelText, value, onCommit, placeholder) {

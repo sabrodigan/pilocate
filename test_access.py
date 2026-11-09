@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from access import choose_key, order_attempts, parse_agent_line, parse_logins, render_ssh_config, splice_ssh_config
+from access import choose_key, order_attempts, parse_agent_line, parse_logins, render_ssh_config, splice_ssh_config, sudo_bash_command
 
 
 class AccessTests(unittest.TestCase):
@@ -10,6 +10,10 @@ class AccessTests(unittest.TestCase):
         parsed = parse_agent_line("ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHdummykeymaterialxxxxxxxxxxxxxxxxxxx id_ed25519 (main github)")
         self.assertEqual(parsed["comment"], "id_ed25519 (main github)")
         self.assertIsNone(parse_agent_line("not a key"))
+
+    def test_sudo_password_stays_one_remote_command(self):
+        self.assertEqual(sudo_bash_command(), "sudo -S -p '' bash -s")
+        self.assertNotIn('""', sudo_bash_command())
 
     def test_logins_try_the_typed_password_before_the_saved_list(self):
         saved = parse_logins("pi pi\nsabrodigan secret\n# skip\n1bad secret\n")

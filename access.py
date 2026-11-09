@@ -289,11 +289,17 @@ def _without_secrets(text, secrets):
     return " ".join(cleaned.split())
 
 
+def sudo_bash_command():
+    # One remote command. An empty separate argument is dropped by ssh, and
+    # sudo then treats the next word as the prompt instead of the shell.
+    return "sudo -S -p '' bash -s"
+
+
 def blink_with_key_sudo(ip, user, secrets):
     last = f"Reached {user}, but the LED needs sudo and the saved password was refused."
     for secret in secrets:
         result = subprocess.run(
-            [*_ssh_base(user, ip), "sudo", "-S", "-p", "", "bash", "-s"],
+            [*_ssh_base(user, ip), sudo_bash_command()],
             input=secret + "\n" + BLINK,
             capture_output=True,
             text=True,

@@ -16,7 +16,9 @@ class IdentifyTests(unittest.TestCase):
         self.assertTrue(is_pi_name("ras5-AI-2.vodafone.ultrahub"))
         self.assertTrue(is_pi_name("storm-ras4b.vodafone.ultrahub"))
         self.assertTrue(is_pi_name("ras-5b.vodafone.ultrahub"))
+        self.assertTrue(is_pi_name("pi-5-Sense.vodafone.ultrahub"))
         self.assertFalse(is_pi_name("leias-iPad.local"))
+        self.assertFalse(is_pi_name("pinkLady2.vodafone.ultrahub"))
         self.assertFalse(is_pi_name("NAS1a.vodafone.ultrahub"))
 
     def test_either_signal_is_enough(self):
