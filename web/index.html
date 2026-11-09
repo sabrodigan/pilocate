@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>pilocate</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header>
+    <div class="title-row">
+      <h1>pilocate</h1>
+      <div class="title-actions">
+        <button id="refresh-btn" type="button" class="secondary">Use latest scan</button>
+        <button id="scan-btn" type="button">Scan the network</button>
+      </div>
+    </div>
+    <section id="network" class="network" aria-live="polite"></section>
+    <p class="lede">Finds the Raspberry Pis on 192.168.1.0/24 from a NetScout scan, then flashes the activity light on the one you want to see.</p>
+    <p id="source" class="muted"></p>
+    <p id="key-line" class="muted"></p>
+    <div class="setup">
+      <label>Password for the Pi login
+        <input id="pi-password" type="password" autocomplete="current-password" />
+      </label>
+      <button id="keys-btn" type="button" class="secondary">Install my key on every Pi</button>
+    </div>
+    <p id="status" class="status" role="status"></p>
+  </header>
+  <main>
+    <div id="cards" class="cards"></div>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>
