@@ -21,6 +21,7 @@ header, main { padding: 1.25rem 1.5rem; }
 header { border-bottom: 1px solid var(--border); background: var(--panel); overflow-wrap: anywhere; }
 main { max-width: 1100px; }
 h1 { margin: 0; font-size: 1.6rem; }
+.credit { margin: 0 0 0.35rem; color: var(--muted); font-size: 0.85rem; }
 h3 { margin: 0; }
 .place { margin: 0.2rem 0 0; font-weight: 650; }
 .title-row, .title-actions, .row { display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center; }
@@ -57,7 +58,8 @@ input { width: 100%; color: var(--text); background: #0f172a; border: 1px solid 
 .card-top { display: flex; justify-content: space-between; gap: 0.5rem 1rem; flex-wrap: wrap; }
 .badge { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 999px; background: #14532d; color: var(--green); font-size: 0.8rem; }
 .badge.away { background: #334155; color: var(--muted); }
-.badge.due { background: #7c2d12; color: #fdba74; }
+.badge.due, button.badge.due { background: #7c2d12; color: #fdba74; }
+button.badge { min-height: 0; padding: 0.1rem 0.5rem; font-size: 0.8rem; line-height: 1.4; }
 .setup { display: flex; gap: 0.75rem; align-items: end; flex-wrap: wrap; margin-top: 0.8rem; }
 .setup label { min-width: min(100%, 16rem); }
 .badges { display: flex; gap: 0.35rem; flex-wrap: wrap; align-items: center; }
