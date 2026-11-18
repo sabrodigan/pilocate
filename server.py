@@ -27,6 +27,24 @@ def utcnow():
     return datetime.now(timezone.utc)
 
 
+def build_id():
+    """The commit this checkout was built from. A copied tree can carry a BUILD file."""
+    root = os.path.dirname(os.path.abspath(__file__))
+    try:
+        out = subprocess.check_output(
+            ["git", "-C", root, "rev-parse", "--short", "HEAD"],
+            stderr=subprocess.DEVNULL, text=True, timeout=2,
+        ).strip()
+        if out:
+            return out
+    except (OSError, subprocess.SubprocessError):
+        pass
+    try:
+        return open(os.path.join(root, "BUILD"), encoding="utf-8").read().strip() or "dev"
+    except OSError:
+        return "dev"
+
+
 def _password(body):
     value = body.get("password") if isinstance(body, dict) else None
     if not isinstance(value, str):
@@ -339,6 +357,8 @@ def make_handler(store, scout):
             elif name.endswith(".svg"):
                 kind = "image/svg+xml"
             data = open(full, "rb").read()
+            if name == "index.html":
+                data = data.replace(b"__BUILD__", build_id().encode())
             self.send_response(200)
             self.send_header("Content-Type", kind)
             self.send_header("Cache-Control", "no-cache")
